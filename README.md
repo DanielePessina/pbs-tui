@@ -152,6 +152,8 @@ attributes.
 
   <img width="3206" height="2482" alt="ScreenShot-2025-11-10-152623@2x" src="https://github.com/user-attachments/assets/e5ee56ac-0498-48db-bf2c-76cd7893e646" />
 
+- Filter tips: use `-u USER` (or `-u=USER`) in the jobs filter to restrict results to a user, e.g. `-u alice gpu`.
+
 
 - Keys and Help Panel:
 
