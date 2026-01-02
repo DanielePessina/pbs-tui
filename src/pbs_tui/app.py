@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import importlib
 import os
+import shlex
 import sys
 from collections import Counter
 from pathlib import Path
@@ -558,7 +559,8 @@ Use the command palette's **Change theme** action to switch between the bundled
 Use the **Filter jobs** input above the Jobs table to narrow results. Type one or
 more search terms; each term must match a value from any column. For example,
 enter `running` to show only running jobs or `alice gpu` to show jobs that match
-both terms across all columns.
+both terms across all columns. Use `-u USER` (or `-u=USER`) to filter by user,
+for example `-u alice gpu`.
 
 ## Details panel
 
@@ -762,14 +764,45 @@ class PBSTUI(App[None]):
         ]
 
     def _job_matches_filter(self, job: Job, reference_time: datetime) -> bool:
-        if not self._job_filter:
+        terms, user_filter = self._parse_job_filter()
+        if not terms and not user_filter:
             return True
-        terms = self._job_filter.lower().split()
+        if user_filter and user_filter not in (job.user or "").lower():
+            return False
         if not terms:
             return True
         cells = format_job_table_cells(job, reference_time)
         row_values = [(value or "").lower() for value in cells.values()]
         return not any(all(term not in value for value in row_values) for term in terms)
+
+    def _parse_job_filter(self) -> tuple[list[str], Optional[str]]:
+        if not self._job_filter:
+            return [], None
+        try:
+            tokens = shlex.split(self._job_filter)
+        except ValueError:
+            tokens = self._job_filter.split()
+        terms: list[str] = []
+        user_filter: Optional[str] = None
+        index = 0
+        while index < len(tokens):
+            token = tokens[index]
+            if token in {"-u", "--user"}:
+                if index + 1 < len(tokens):
+                    user_filter = tokens[index + 1]
+                    index += 2
+                    continue
+                index += 1
+                continue
+            if token.startswith("-u=") or token.startswith("--user="):
+                user_filter = token.split("=", 1)[1]
+                index += 1
+                continue
+            terms.append(token)
+            index += 1
+        normalized_terms = [term.lower() for term in terms if term]
+        normalized_user = user_filter.strip().lower() if user_filter else None
+        return normalized_terms, normalized_user
 
     async def action_refresh(self) -> None:
         await self.refresh_data()

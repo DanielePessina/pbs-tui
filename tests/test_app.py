@@ -189,6 +189,26 @@ def test_detail_toggle_binding_exposed():
     )
 
 
+def test_job_filter_user_flag():
+    app = PBSTUI()
+    job = make_job(user="alice", name="gpu")
+
+    app._job_filter = "-u alice"
+    assert app._job_matches_filter(job, NOW)
+
+    app._job_filter = "-u bob"
+    assert not app._job_matches_filter(job, NOW)
+
+    app._job_filter = "gpu -u alice"
+    assert app._job_matches_filter(job, NOW)
+
+    app._job_filter = "gpu -u bob"
+    assert not app._job_matches_filter(job, NOW)
+
+    app._job_filter = "-u=alice gpu"
+    assert app._job_matches_filter(job, NOW)
+
+
 # def test_run_inline_displays_sample_job_data(monkeypatch, capsys):
 #     out, err = _inline_output(monkeypatch, capsys)
 #     assert "PBS Jobs as of" in out
@@ -575,4 +595,3 @@ def test_command_palette_includes_detail_toggle():
             assert any(command.title == "Toggle detail panel" for command in commands)
 
     asyncio.run(interact())
-
